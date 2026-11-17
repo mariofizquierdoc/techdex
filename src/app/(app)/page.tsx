@@ -1,14 +1,21 @@
 import Link from "next/link";
+import { getFormatter, getTranslations } from "next-intl/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireUser } from "@/lib/authz";
 import { db } from "@/lib/db";
-import { formatCents } from "@/lib/format";
-import { ITEM_STATUSES, STATUS_CLASS, STATUS_LABEL } from "@/lib/labels";
+import { ITEM_STATUSES, STATUS_CLASS } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 import { Timeline } from "./items/[id]/timeline";
 
+export async function generateMetadata() {
+  const t = await getTranslations("dashboard");
+  return { title: t("title") };
+}
+
 export default async function DashboardPage() {
   await requireUser();
+  const t = await getTranslations();
+  const format = await getFormatter();
 
   const [byStatus, byCategory, categories, totalValue, people, recent] = await Promise.all([
     db.item.groupBy({ by: ["status"], _count: true }),
@@ -37,19 +44,23 @@ export default async function DashboardPage() {
 
   return (
     <div className="grid gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">{t("dashboard.title")}</h1>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <Stat label="Total items" value={total} href="/items" />
-        <Stat label="Active people" value={people} href="/people" />
-        <Stat label="Value in service" value={formatCents(totalValue._sum.purchasePriceCents ?? 0)} hint="Purchase price of non-retired items" />
+        <Stat label={t("dashboard.totalItems")} value={format.number(total)} href="/items" />
+        <Stat label={t("dashboard.activePeople")} value={format.number(people)} href="/people" />
+        <Stat
+          label={t("dashboard.valueInService")}
+          value={format.number((totalValue._sum.purchasePriceCents ?? 0) / 100, "money")}
+          hint={t("dashboard.valueHint")}
+        />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {ITEM_STATUSES.map((s) => (
           <Card key={s} size="sm">
             <CardContent className="flex items-center justify-between">
-              <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", STATUS_CLASS[s])}>{STATUS_LABEL[s]}</span>
+              <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", STATUS_CLASS[s])}>{t(`status.${s}`)}</span>
               <span className="text-2xl font-semibold tabular-nums">{statusCount[s] ?? 0}</span>
             </CardContent>
           </Card>
@@ -59,10 +70,10 @@ export default async function DashboardPage() {
       <div className="grid gap-6 lg:grid-cols-[1fr_1.4fr]">
         <Card>
           <CardHeader>
-            <CardTitle>Items by category</CardTitle>
+            <CardTitle>{t("dashboard.byCategory")}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3">
-            {categoryRows.length === 0 && <p className="text-sm text-muted-foreground">No items yet.</p>}
+            {categoryRows.length === 0 && <p className="text-sm text-muted-foreground">{t("dashboard.noItems")}</p>}
             {categoryRows.map((c) => (
               <div key={c.name} className="grid gap-1 text-sm">
                 <div className="flex justify-between">
@@ -79,7 +90,7 @@ export default async function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Recent activity</CardTitle>
+            <CardTitle>{t("dashboard.recentActivity")}</CardTitle>
           </CardHeader>
           <CardContent>
             <Timeline

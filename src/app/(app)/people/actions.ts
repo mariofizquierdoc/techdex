@@ -19,7 +19,7 @@ export async function savePersonAction(
       if (personId) await db.person.update({ where: { id: personId }, data });
       else await db.person.create({ data });
     },
-    personId ? "Person updated" : "Person added",
+    personId ? "personUpdated" : "personAdded",
   );
   if (state.ok) {
     revalidatePath("/people", "layout");
@@ -34,7 +34,7 @@ export async function setPersonActiveAction(personId: string, active: boolean): 
       await requireAdmin();
       await setPersonActive(personId, active);
     },
-    active ? "Person reactivated" : "Person deactivated",
+    active ? "personReactivated" : "personDeactivated",
   );
   if (state.ok) revalidatePath("/people", "layout");
   return state;

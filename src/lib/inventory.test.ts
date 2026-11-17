@@ -62,7 +62,7 @@ describe("assignItem", () => {
     expect(after).toMatchObject({ assigneeId: ben.id, jobTitle: "Dev", location: "Remote", status: "IN_USE" });
     const ev = await events(item.id);
     expect(ev.map((e) => e.type)).toEqual(["PURCHASED", "ASSIGNED", "UNASSIGNED", "ASSIGNED"]);
-    expect(ev[2]).toMatchObject({ personId: ana.id, jobTitle: "Designer", location: "HQ" });
+    expect(ev[2]).toMatchObject({ personId: ana.id, jobTitle: "Designer", location: "HQ", toStatus: "IN_USE", notes: null });
     expect(ev[3]).toMatchObject({ personId: ben.id, jobTitle: "Dev", location: "Remote" });
   });
 
@@ -77,13 +77,16 @@ describe("assignItem", () => {
   it("rejects inactive people and retired items", async () => {
     const item = await newItem();
     const gone = await db.person.create({ data: { name: "Gone", email: "g@x.com", active: false } });
-    await expect(assignItem(item.id, { personId: gone.id, occurredAt: d("2026-02-01") }, userId)).rejects.toThrow(DomainError);
+    await expect(assignItem(item.id, { personId: gone.id, occurredAt: d("2026-02-01") }, userId)).rejects.toMatchObject({
+      code: "personInactive",
+      params: { name: "Gone" },
+    });
 
     const ana = await db.person.create({ data: { name: "Ana", email: "ana@x.com" } });
     await changeStatus(item.id, { toStatus: "RETIRED", occurredAt: d("2026-02-01") }, userId);
-    await expect(assignItem(item.id, { personId: ana.id, occurredAt: d("2026-02-02") }, userId)).rejects.toThrow(
-      "Retired items can't be assigned",
-    );
+    await expect(assignItem(item.id, { personId: ana.id, occurredAt: d("2026-02-02") }, userId)).rejects.toMatchObject({
+      code: "retiredCannotAssign",
+    });
   });
 
   it("rolls back the UNASSIGNED event when assignment fails", async () => {
@@ -102,14 +105,15 @@ describe("unassign / status / repair / note", () => {
     await assignItem(item.id, { personId: ana.id, location: "HQ", occurredAt: d("2026-02-01") }, userId);
     const after = await unassignItem(item.id, { toStatus: "IN_STORAGE", occurredAt: d("2026-03-01") }, userId);
     expect(after).toMatchObject({ assigneeId: null, location: null, status: "IN_STORAGE" });
-    await expect(unassignItem(item.id, { toStatus: "IN_STORAGE", occurredAt: d("2026-03-02") }, userId)).rejects.toThrow(
-      "isn't assigned",
-    );
+    await expect(unassignItem(item.id, { toStatus: "IN_STORAGE", occurredAt: d("2026-03-02") }, userId)).rejects.toMatchObject({
+      code: "notAssigned",
+    });
   });
 
   it("can't set 'in use' without an assignee; retiring an assigned item returns it", async () => {
     const item = await newItem();
     await expect(changeStatus(item.id, { toStatus: "IN_USE", occurredAt: d("2026-02-01") }, userId)).rejects.toThrow(DomainError);
+    await expect(changeStatus(item.id, { toStatus: "IN_USE", occurredAt: d("2026-02-01") }, userId)).rejects.toMatchObject({ code: "assignToUse" });
 
     const ana = await db.person.create({ data: { name: "Ana", email: "ana@x.com" } });
     await assignItem(item.id, { personId: ana.id, occurredAt: d("2026-02-01") }, userId);
@@ -141,6 +145,6 @@ describe("setPersonActive", () => {
     const item = await newItem();
     const ana = await db.person.create({ data: { name: "Ana", email: "ana@x.com" } });
     await assignItem(item.id, { personId: ana.id, occurredAt: d("2026-02-01") }, userId);
-    await expect(setPersonActive(ana.id, false)).rejects.toThrow("still has 1 item");
+    await expect(setPersonActive(ana.id, false)).rejects.toMatchObject({ code: "personHoldsItems", params: { count: 1 } });
   });
 });

@@ -48,7 +48,7 @@ export async function deleteItemAction(itemId: string): Promise<ActionState> {
   const state = await runAction(async () => {
     await requireAdmin();
     await inventory.deleteItem(itemId);
-  }, "Item deleted");
+  }, "itemDeleted");
   if (!state.ok) return state;
   revalidateItem(itemId);
   redirect("/items");
@@ -58,7 +58,7 @@ export async function assignItemAction(itemId: string, _prev: ActionState, formD
   const state = await runAction(async () => {
     const user = await requireAdmin();
     await inventory.assignItem(itemId, assignSchema.parse(formToObject(formData)), user.id);
-  }, "Item assigned");
+  }, "itemAssigned");
   if (state.ok) revalidateItem(itemId);
   return state;
 }
@@ -67,7 +67,7 @@ export async function unassignItemAction(itemId: string, _prev: ActionState, for
   const state = await runAction(async () => {
     const user = await requireAdmin();
     await inventory.unassignItem(itemId, unassignSchema.parse(formToObject(formData)), user.id);
-  }, "Item returned");
+  }, "itemReturned");
   if (state.ok) revalidateItem(itemId);
   return state;
 }
@@ -76,7 +76,7 @@ export async function recordRepairAction(itemId: string, _prev: ActionState, for
   const state = await runAction(async () => {
     const user = await requireAdmin();
     await inventory.recordRepair(itemId, repairSchema.parse(formToObject(formData)), user.id);
-  }, "Repair recorded");
+  }, "repairRecorded");
   if (state.ok) revalidateItem(itemId);
   return state;
 }
@@ -85,7 +85,7 @@ export async function changeStatusAction(itemId: string, _prev: ActionState, for
   const state = await runAction(async () => {
     const user = await requireAdmin();
     await inventory.changeStatus(itemId, statusSchema.parse(formToObject(formData)), user.id);
-  }, "Status updated");
+  }, "statusUpdated");
   if (state.ok) revalidateItem(itemId);
   return state;
 }
@@ -94,7 +94,7 @@ export async function addNoteAction(itemId: string, _prev: ActionState, formData
   const state = await runAction(async () => {
     const user = await requireAdmin();
     await inventory.addNote(itemId, noteSchema.parse(formToObject(formData)), user.id);
-  }, "Note added");
+  }, "noteAdded");
   if (state.ok) revalidateItem(itemId);
   return state;
 }

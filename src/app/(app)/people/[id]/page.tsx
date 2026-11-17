@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { ArrowLeftIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,16 +31,17 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
     },
   });
   if (!person) notFound();
+  const t = await getTranslations("people");
 
   return (
     <div className="grid gap-6">
       <div>
         <Link href="/people" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeftIcon className="size-4" /> All people
+          <ArrowLeftIcon className="size-4" /> {t("allPeople")}
         </Link>
         <div className="mt-2 flex items-center gap-2">
           <h1 className="text-2xl font-semibold tracking-tight">{person.name}</h1>
-          {!person.active && <Badge variant="outline">Inactive</Badge>}
+          {!person.active && <Badge variant="outline">{t("inactive")}</Badge>}
         </div>
         <p className="text-muted-foreground">{person.email}</p>
       </div>
@@ -47,19 +49,19 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
       <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
         <Card>
           <CardHeader>
-            <CardTitle>Currently holding ({person.items.length})</CardTitle>
+            <CardTitle>{t("holding", { count: person.items.length })}</CardTitle>
           </CardHeader>
           <CardContent>
             {person.items.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No items assigned.</p>
+              <p className="text-sm text-muted-foreground">{t("noItems")}</p>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Asset tag</TableHead>
-                    <TableHead>Item</TableHead>
-                    <TableHead>Position</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>{t("assetTag")}</TableHead>
+                    <TableHead>{t("item")}</TableHead>
+                    <TableHead>{t("position")}</TableHead>
+                    <TableHead>{t("status")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -88,7 +90,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
 
         <Card>
           <CardHeader>
-            <CardTitle>History</CardTitle>
+            <CardTitle>{t("history")}</CardTitle>
           </CardHeader>
           <CardContent>
             <Timeline

@@ -1,14 +1,19 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { requireUser } from "@/lib/authz";
 import { db } from "@/lib/db";
 import { ItemsTable, type ItemRow } from "./items-table";
 
-export const metadata = { title: "Items" };
+export async function generateMetadata() {
+  const t = await getTranslations("items");
+  return { title: t("title") };
+}
 
 export default async function ItemsPage() {
   const user = await requireUser();
+  const t = await getTranslations("items");
   const [items, categories] = await Promise.all([
     db.item.findMany({
       orderBy: { assetTag: "asc" },
@@ -41,13 +46,13 @@ export default async function ItemsPage() {
     <div className="grid gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Items</h1>
-          <p className="text-sm text-muted-foreground">{items.length} items in inventory</p>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("count", { count: items.length })}</p>
         </div>
         {user.role === "ADMIN" && (
           <Button asChild>
             <Link href="/items/new">
-              <PlusIcon /> New item
+              <PlusIcon /> {t("newItem")}
             </Link>
           </Button>
         )}

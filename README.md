@@ -28,6 +28,20 @@ Default seed accounts (change them in `.env` before seeding, or reset their pass
 
 Permissions are enforced in every server action (`requireAdmin()` in `src/lib/authz.ts`), not just hidden in the UI.
 
+## Languages
+The UI is in **Spanish (Mexico)** by default, with **English** available. Each user picks their language from the
+switcher in the header (or on the login page); the choice is saved to their account and restored on every login.
+
+- Translations live in `messages/es.json` and `messages/en.json` (via [next-intl](https://next-intl.dev)).
+  Every `t("…")` key is type-checked against `es.json`, and `npm test` checks both files have the same keys and
+  placeholders.
+- Dates and prices follow the user's locale (`es-MX` / `en-US`). Prices are in USD; Spanish shows them as
+  "USD 1,299.99" because "$" means pesos in Mexico.
+- Dates are shown in the time zone set by `APP_TIME_ZONE` (default `America/Mexico_City`).
+- Category names, notes and other data people type are stored as entered and not translated.
+- To add a language: create `messages/<code>.json` with the same keys, then add the locale to `LOCALES`,
+  `LOCALE_NAMES` and `MESSAGE_FILE` in `src/i18n/config.ts`.
+
 ## Data model
 - **Person**: someone who can hold equipment (name, email, active). Deactivate people who leave; their history stays.
 - **Item**: asset tag, serial, category, brand/model, description, price, purchase date, current condition notes,
