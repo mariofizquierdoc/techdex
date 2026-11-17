@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  VIEWER
+}
+
+enum ItemStatus {
+  IN_USE
+  IN_STORAGE
+  IN_REPAIR
+  RETIRED
+}
+
+enum EventType {
+  PURCHASED
+  ASSIGNED
+  UNASSIGNED
+  REPAIRED
+  STATUS_CHANGED
+  NOTE
+}
+
+/// App login accounts.
+model User {
+  id           String      @id @default(cuid())
+  email        String      @unique
+  name         String
+  passwordHash String
+  role         Role        @default(VIEWER)
+  createdAt    DateTime    @default(now())
+  events       ItemEvent[] @relation("EventAuthor")
+}
+
+/// People items can be assigned to.
+model Person {
+  id        String      @id @default(cuid())
+  name      String
+  email     String      @unique
+  active    Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  items     Item[]
+  events    ItemEvent[]
+}
+
+model Category {
+  id    String @id @default(cuid())
+  name  String @unique
+  items Item[]
+}
+
+model Item {
+  id                 String      @id @default(cuid())
+  assetTag           String      @unique
+  serialNumber       String?     @unique
+  categoryId         String
+  category           Category    @relation(fields: [categoryId], references: [id])
+  brand              String?
+  model              String?
+  description        String
+  /// Current condition notes, e.g. "screen cracked", "good 7/10".
+  notes              String?
+  status             ItemStatus  @default(IN_STORAGE)
+  /// Stored in cents; SQLite has no exact decimal type.
+  purchasePriceCents Int?
+  purchasedAt        DateTime?
+  /// Current assignment, kept in sync with the latest ASSIGNED/UNASSIGNED event.
+  assigneeId         String?
+  assignee           Person?     @relation(fields: [assigneeId], references: [id])
+  jobTitle           String?
+  location           String?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  events             ItemEvent[]
+
+  @@index([status])
+  @@index([assigneeId])
+  @@index([categoryId])
+}
+
+/// Immutable history of everything that happened to an item.
+model ItemEvent {
+  id          String      @id @default(cuid())
+  itemId      String
+  item        Item        @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  type        EventType
+  /// When it happened in the real world (bought / repaired / handed over).
+  occurredAt  DateTime
+  personId    String?
+  person      Person?     @relation(fields: [personId], references: [id])
+  /// Snapshot of the assignee's job title and location at the time.
+  jobTitle    String?
+  location    String?
+  notes       String?
+  fromStatus  ItemStatus?
+  toStatus    ItemStatus?
+  createdById String
+  createdBy   User        @relation("EventAuthor", fields: [createdById], references: [id])
+  createdAt   DateTime    @default(now())
+
+  @@index([itemId, occurredAt])
+  @@index([personId])
+}
