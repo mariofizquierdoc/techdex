@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { PencilIcon, PlusIcon } from "lucide-react";
 import { ActionDialog } from "@/components/action-dialog";
 import { ConfirmAction } from "@/components/confirm-button";
@@ -9,29 +10,30 @@ import { Input } from "@/components/ui/input";
 import { savePersonAction, setPersonActiveAction } from "./actions";
 
 export function PersonDialog({ person }: { person?: { id: string; name: string; email: string } }) {
+  const t = useTranslations("people");
   return (
     <ActionDialog
-      title={person ? "Edit person" : "Add person"}
+      title={person ? t("editTitle") : t("addTitle")}
       trigger={
         person ? (
-          <Button variant="ghost" size="icon-sm" aria-label={`Edit ${person.name}`}>
+          <Button variant="ghost" size="icon-sm" aria-label={t("editLabel", { name: person.name })}>
             <PencilIcon />
           </Button>
         ) : (
           <Button>
-            <PlusIcon /> Add person
+            <PlusIcon /> {t("add")}
           </Button>
         )
       }
       action={savePersonAction.bind(null, person?.id ?? null)}
-      submitLabel={person ? "Save" : "Add person"}
+      submitLabel={person ? undefined : t("add")}
     >
       {(s) => (
         <>
-          <Field label="Name *" htmlFor="name" error={s.fieldErrors?.name}>
+          <Field label={t("name")} htmlFor="name" error={s.fieldErrors?.name}>
             <Input id="name" name="name" defaultValue={person?.name} required autoFocus />
           </Field>
-          <Field label="Email *" htmlFor="email" error={s.fieldErrors?.email}>
+          <Field label={t("email")} htmlFor="email" error={s.fieldErrors?.email}>
             <Input id="email" name="email" type="email" defaultValue={person?.email} required />
           </Field>
         </>
@@ -41,19 +43,16 @@ export function PersonDialog({ person }: { person?: { id: string; name: string; 
 }
 
 export function ToggleActiveButton({ person }: { person: { id: string; name: string; active: boolean } }) {
+  const t = useTranslations("people");
   return (
     <ConfirmAction
-      title={person.active ? `Deactivate ${person.name}?` : `Reactivate ${person.name}?`}
-      description={
-        person.active
-          ? "Inactive people keep their history but can't receive items. Use this when someone leaves."
-          : "They will be able to receive items again."
-      }
-      confirmLabel={person.active ? "Deactivate" : "Reactivate"}
+      title={person.active ? t("deactivateTitle", { name: person.name }) : t("reactivateTitle", { name: person.name })}
+      description={person.active ? t("deactivateDescription") : t("reactivateDescription")}
+      confirmLabel={person.active ? t("deactivate") : t("reactivate")}
       action={() => setPersonActiveAction(person.id, !person.active)}
       trigger={
         <Button variant="ghost" size="sm">
-          {person.active ? "Deactivate" : "Reactivate"}
+          {person.active ? t("deactivate") : t("reactivate")}
         </Button>
       }
     />

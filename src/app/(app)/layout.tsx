@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { LogOutIcon, MonitorSmartphoneIcon } from "lucide-react";
 import { signOut } from "@/auth";
+import { LocaleSwitcher } from "@/components/locale-switcher";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/authz";
@@ -10,15 +12,16 @@ import { NavLinks } from "./nav-links";
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
   if (!user) redirect("/logout");
+  const t = await getTranslations();
 
   const links = [
-    { href: "/", label: "Dashboard" },
-    { href: "/items", label: "Items" },
-    { href: "/people", label: "People" },
+    { href: "/", label: t("nav.dashboard") },
+    { href: "/items", label: t("nav.items") },
+    { href: "/people", label: t("nav.people") },
     ...(user.role === "ADMIN"
       ? [
-          { href: "/settings/categories", label: "Categories" },
-          { href: "/settings/users", label: "Users" },
+          { href: "/settings/categories", label: t("nav.categories") },
+          { href: "/settings/users", label: t("nav.users") },
         ]
       : []),
   ];
@@ -34,16 +37,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <NavLinks links={links} />
           <div className="ml-auto flex items-center gap-3 text-sm">
             <span className="hidden text-muted-foreground sm:inline">{user.name}</span>
-            <Badge variant="outline">{user.role === "ADMIN" ? "Admin" : "Viewer"}</Badge>
+            <Badge variant="outline">{t(`role.${user.role}`)}</Badge>
+            <LocaleSwitcher />
             <form
               action={async () => {
                 "use server";
                 await signOut({ redirectTo: "/login" });
               }}
             >
-              <Button variant="ghost" size="icon-sm" type="submit" title="Sign out">
+              <Button variant="ghost" size="icon-sm" type="submit" title={t("nav.signOut")}>
                 <LogOutIcon />
-                <span className="sr-only">Sign out</span>
+                <span className="sr-only">{t("nav.signOut")}</span>
               </Button>
             </form>
           </div>

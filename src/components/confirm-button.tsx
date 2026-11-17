@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -20,7 +21,7 @@ export function ConfirmAction({
   trigger,
   title,
   description,
-  confirmLabel = "Confirm",
+  confirmLabel,
   action,
 }: {
   trigger: React.ReactNode;
@@ -30,6 +31,7 @@ export function ConfirmAction({
   action: () => Promise<ActionState | void>;
 }) {
   const [pending, startTransition] = React.useTransition();
+  const t = useTranslations();
 
   return (
     <AlertDialog>
@@ -40,18 +42,18 @@ export function ConfirmAction({
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
           <AlertDialogAction
             disabled={pending}
             onClick={() =>
               startTransition(async () => {
                 const res = await action();
                 if (res?.error) toast.error(res.error);
-                else if (res?.ok) toast.success(res.message ?? "Done");
+                else if (res?.ok) toast.success(res.message ?? t("toast.done"));
               })
             }
           >
-            {confirmLabel}
+            {confirmLabel ?? t("common.delete")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

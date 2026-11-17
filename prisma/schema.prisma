@@ -35,6 +35,8 @@ model User {
   name         String
   passwordHash String
   role         Role        @default(VIEWER)
+  /// UI language, e.g. "es-MX" or "en-US".
+  locale       String      @default("es-MX")
   createdAt    DateTime    @default(now())
   events       ItemEvent[] @relation("EventAuthor")
 }

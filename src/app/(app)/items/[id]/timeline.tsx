@@ -1,5 +1,7 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import type { EventType, ItemStatus } from "@prisma/client";
+import { getFormatter, getTranslations } from "next-intl/server";
 import {
   ArrowRightLeftIcon,
   ShoppingCartIcon,
@@ -9,8 +11,6 @@ import {
   WrenchIcon,
   type LucideIcon,
 } from "lucide-react";
-import { formatDate } from "@/lib/format";
-import { EVENT_LABEL, STATUS_LABEL } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
 export type TimelineEvent = {
@@ -47,37 +47,40 @@ const TONE: Record<EventType, string> = {
   NOTE: "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
 };
 
-function headline(e: TimelineEvent) {
-  const person = !e.personName ? null : e.personId ? (
-    <Link href={`/people/${e.personId}`} className="font-medium hover:underline">
-      {e.personName}
-    </Link>
-  ) : (
-    <span className="font-medium">{e.personName}</span>
-  );
-  switch (e.type) {
-    case "ASSIGNED":
-      return <>Assigned to {person}</>;
-    case "UNASSIGNED":
-      return (
-        <>
-          Returned by {person}
-          {e.toStatus && e.toStatus !== "IN_USE" && <> → {STATUS_LABEL[e.toStatus].toLowerCase()}</>}
-        </>
-      );
-    case "STATUS_CHANGED":
-      return (
-        <>
-          {e.fromStatus ? STATUS_LABEL[e.fromStatus] : "?"} → {e.toStatus ? STATUS_LABEL[e.toStatus] : "?"}
-        </>
-      );
-    default:
-      return EVENT_LABEL[e.type];
-  }
-}
+export async function Timeline({ events }: { events: TimelineEvent[] }) {
+  const t = await getTranslations();
+  const format = await getFormatter();
 
-export function Timeline({ events }: { events: TimelineEvent[] }) {
-  if (events.length === 0) return <p className="text-sm text-muted-foreground">No history yet.</p>;
+  function headline(e: TimelineEvent): ReactNode {
+    const person = (chunks: ReactNode) =>
+      e.personId ? (
+        <Link href={`/people/${e.personId}`} className="font-medium hover:underline">
+          {chunks}
+        </Link>
+      ) : (
+        <span className="font-medium">{chunks}</span>
+      );
+    const name = e.personName ?? "?";
+
+    switch (e.type) {
+      case "ASSIGNED":
+        return t.rich("timeline.assignedTo", { name, person });
+      case "UNASSIGNED":
+        // An item handed straight to someone else stays "in use".
+        if (e.toStatus === "IN_USE") return t.rich("timeline.reassignedFrom", { name, person });
+        if (e.toStatus) return t.rich("timeline.returnedTo", { name, person, status: t(`status.${e.toStatus}`) });
+        return t.rich("timeline.returnedBy", { name, person });
+      case "STATUS_CHANGED":
+        return t("timeline.statusChange", {
+          from: e.fromStatus ? t(`status.${e.fromStatus}`) : "?",
+          to: e.toStatus ? t(`status.${e.toStatus}`) : "?",
+        });
+      default:
+        return t(`event.${e.type}`);
+    }
+  }
+
+  if (events.length === 0) return <p className="text-sm text-muted-foreground">{t("timeline.empty")}</p>;
 
   return (
     <ol className="relative grid gap-5">
@@ -100,11 +103,13 @@ export function Timeline({ events }: { events: TimelineEvent[] }) {
                   )}
                   {headline(e)}
                 </p>
-                <time className="text-xs whitespace-nowrap text-muted-foreground">{formatDate(e.occurredAt)}</time>
+                <time dateTime={e.occurredAt.toISOString()} className="text-xs whitespace-nowrap text-muted-foreground">
+                  {format.dateTime(e.occurredAt, "short")}
+                </time>
               </div>
               {position && <p className="text-muted-foreground">{position}</p>}
               {e.notes && <p className="mt-1 whitespace-pre-wrap">{e.notes}</p>}
-              <p className="mt-1 text-xs text-muted-foreground">Recorded by {e.createdBy}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{t("timeline.recordedBy", { name: e.createdBy })}</p>
             </div>
           </li>
         );

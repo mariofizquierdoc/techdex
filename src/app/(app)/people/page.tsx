@@ -1,15 +1,20 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { requireUser } from "@/lib/authz";
 import { db } from "@/lib/db";
 import { PersonDialog, ToggleActiveButton } from "./person-dialog";
 
-export const metadata = { title: "People" };
+export async function generateMetadata() {
+  const t = await getTranslations("people");
+  return { title: t("title") };
+}
 
 export default async function PeoplePage() {
   const user = await requireUser();
   const isAdmin = user.role === "ADMIN";
+  const t = await getTranslations("people");
   const people = await db.person.findMany({
     orderBy: [{ active: "desc" }, { name: "asc" }],
     include: {
@@ -27,8 +32,8 @@ export default async function PeoplePage() {
     <div className="grid gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">People</h1>
-          <p className="text-sm text-muted-foreground">Everyone who can be assigned equipment.</p>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
         </div>
         {isAdmin && <PersonDialog />}
       </div>
@@ -37,11 +42,11 @@ export default async function PeoplePage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Last known position</TableHead>
-              <TableHead className="text-right">Items held</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>{t("nameCol")}</TableHead>
+              <TableHead>{t("emailCol")}</TableHead>
+              <TableHead>{t("lastPosition")}</TableHead>
+              <TableHead className="text-right">{t("itemsHeld")}</TableHead>
+              <TableHead>{t("statusCol")}</TableHead>
               {isAdmin && <TableHead className="w-0" />}
             </TableRow>
           </TableHeader>
@@ -49,7 +54,7 @@ export default async function PeoplePage() {
             {people.length === 0 && (
               <TableRow>
                 <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                  No people yet.
+                  {t("empty")}
                 </TableCell>
               </TableRow>
             )}
@@ -66,7 +71,7 @@ export default async function PeoplePage() {
                 </TableCell>
                 <TableCell className="text-right tabular-nums">{p._count.items}</TableCell>
                 <TableCell>
-                  {p.active ? <Badge variant="secondary">Active</Badge> : <Badge variant="outline">Inactive</Badge>}
+                  {p.active ? <Badge variant="secondary">{t("active")}</Badge> : <Badge variant="outline">{t("inactive")}</Badge>}
                 </TableCell>
                 {isAdmin && (
                   <TableCell>

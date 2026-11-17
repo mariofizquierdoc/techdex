@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -26,7 +27,7 @@ export function ActionDialog({
   description,
   trigger,
   action,
-  submitLabel = "Save",
+  submitLabel,
   children,
 }: {
   title: string;
@@ -37,6 +38,7 @@ export function ActionDialog({
   children: (state: ActionState) => React.ReactNode;
 }) {
   const [open, setOpen] = React.useState(false);
+  const t = useTranslations("common");
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -46,7 +48,7 @@ export function ActionDialog({
           <DialogTitle>{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
-        <DialogForm action={action} submitLabel={submitLabel} onDone={() => setOpen(false)}>
+        <DialogForm action={action} submitLabel={submitLabel ?? t("save")} onDone={() => setOpen(false)}>
           {children}
         </DialogForm>
       </DialogContent>
@@ -65,6 +67,7 @@ function DialogForm({
   onDone: () => void;
   children: (state: ActionState) => React.ReactNode;
 }) {
+  const t = useTranslations();
   const { state, onSubmit, pending } = useFormAction(action, {} as ActionState);
   const onDoneRef = React.useRef(onDone);
   React.useEffect(() => {
@@ -73,10 +76,10 @@ function DialogForm({
 
   React.useEffect(() => {
     if (state.ok) {
-      toast.success(state.message ?? "Saved");
+      toast.success(state.message ?? t("toast.saved"));
       onDoneRef.current();
     }
-  }, [state]);
+  }, [state, t]);
 
   return (
     <form onSubmit={onSubmit} className="grid gap-4">
@@ -84,7 +87,7 @@ function DialogForm({
       <FormError message={state.error} />
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onDone}>
-          Cancel
+          {t("common.cancel")}
         </Button>
         <SubmitButton pending={pending}>{submitLabel}</SubmitButton>
       </DialogFooter>

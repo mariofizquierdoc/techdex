@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import type { Role } from "@prisma/client";
 import { KeyRoundIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
@@ -10,43 +11,43 @@ import { Field } from "@/components/form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ROLES } from "@/lib/labels";
 import { createUserAction, deleteUserAction, resetPasswordAction, setUserRoleAction } from "../actions";
 
-const ROLE_LABEL: Record<Role, string> = { ADMIN: "Admin", VIEWER: "Viewer" };
-
 export function CreateUserDialog() {
+  const t = useTranslations();
   return (
     <ActionDialog
-      title="Add user"
-      description="Share the password with them securely; they can't change it themselves yet."
+      title={t("users.addTitle")}
+      description={t("users.addDescription")}
       trigger={
         <Button>
-          <PlusIcon /> Add user
+          <PlusIcon /> {t("users.add")}
         </Button>
       }
       action={createUserAction}
-      submitLabel="Create user"
+      submitLabel={t("users.createSubmit")}
     >
       {(s) => (
         <>
-          <Field label="Name *" htmlFor="name" error={s.fieldErrors?.name}>
+          <Field label={t("users.name")} htmlFor="name" error={s.fieldErrors?.name}>
             <Input id="name" name="name" required autoFocus />
           </Field>
-          <Field label="Email *" htmlFor="email" error={s.fieldErrors?.email}>
+          <Field label={t("users.email")} htmlFor="email" error={s.fieldErrors?.email}>
             <Input id="email" name="email" type="email" required />
           </Field>
-          <Field label="Role *" htmlFor="role" error={s.fieldErrors?.role}>
+          <Field label={t("users.role")} htmlFor="role" error={s.fieldErrors?.role}>
             <Select name="role" defaultValue="VIEWER">
               <SelectTrigger id="role" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="VIEWER">Viewer (read-only)</SelectItem>
-                <SelectItem value="ADMIN">Admin (can edit)</SelectItem>
+                <SelectItem value="VIEWER">{t("role.viewerLong")}</SelectItem>
+                <SelectItem value="ADMIN">{t("role.adminLong")}</SelectItem>
               </SelectContent>
             </Select>
           </Field>
-          <Field label="Password *" htmlFor="password" error={s.fieldErrors?.password} hint="At least 8 characters">
+          <Field label={t("users.password")} htmlFor="password" error={s.fieldErrors?.password} hint={t("users.passwordHint")}>
             <Input id="password" name="password" type="password" autoComplete="new-password" required minLength={8} />
           </Field>
         </>
@@ -56,6 +57,7 @@ export function CreateUserDialog() {
 }
 
 export function RoleSelect({ userId, role, disabled }: { userId: string; role: Role; disabled: boolean }) {
+  const t = useTranslations();
   const [pending, startTransition] = React.useTransition();
   return (
     <Select
@@ -65,17 +67,17 @@ export function RoleSelect({ userId, role, disabled }: { userId: string; role: R
         startTransition(async () => {
           const res = await setUserRoleAction(userId, value);
           if (res.error) toast.error(res.error);
-          else toast.success(res.message ?? "Role updated");
+          else toast.success(res.message ?? t("toast.roleUpdated"));
         })
       }
     >
-      <SelectTrigger size="sm" className="w-28" aria-label="Role">
+      <SelectTrigger size="sm" className="w-36" aria-label={t("users.roleCol")}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        {(Object.keys(ROLE_LABEL) as Role[]).map((r) => (
+        {ROLES.map((r) => (
           <SelectItem key={r} value={r}>
-            {ROLE_LABEL[r]}
+            {t(`role.${r}`)}
           </SelectItem>
         ))}
       </SelectContent>
@@ -84,19 +86,20 @@ export function RoleSelect({ userId, role, disabled }: { userId: string; role: R
 }
 
 export function ResetPasswordDialog({ user }: { user: { id: string; name: string } }) {
+  const t = useTranslations("users");
   return (
     <ActionDialog
-      title={`Reset password for ${user.name}`}
+      title={t("resetTitle", { name: user.name })}
       trigger={
-        <Button variant="ghost" size="icon-sm" aria-label={`Reset password for ${user.name}`} title="Reset password">
+        <Button variant="ghost" size="icon-sm" aria-label={t("resetLabel")} title={t("resetLabel")}>
           <KeyRoundIcon />
         </Button>
       }
       action={resetPasswordAction.bind(null, user.id)}
-      submitLabel="Reset password"
+      submitLabel={t("resetSubmit")}
     >
       {(s) => (
-        <Field label="New password *" htmlFor="password" error={s.fieldErrors?.password} hint="At least 8 characters">
+        <Field label={t("newPassword")} htmlFor="password" error={s.fieldErrors?.password} hint={t("passwordHint")}>
           <Input id="password" name="password" type="password" autoComplete="new-password" required minLength={8} autoFocus />
         </Field>
       )}
@@ -105,14 +108,14 @@ export function ResetPasswordDialog({ user }: { user: { id: string; name: string
 }
 
 export function DeleteUserButton({ user }: { user: { id: string; name: string } }) {
+  const t = useTranslations("users");
   return (
     <ConfirmAction
-      title={`Delete ${user.name}?`}
-      description="They will no longer be able to sign in."
-      confirmLabel="Delete"
+      title={t("deleteTitle", { name: user.name })}
+      description={t("deleteDescription")}
       action={() => deleteUserAction(user.id)}
       trigger={
-        <Button variant="ghost" size="icon-sm" aria-label={`Delete ${user.name}`} title="Delete user">
+        <Button variant="ghost" size="icon-sm" aria-label={t("deleteLabel")} title={t("deleteLabel")}>
           <Trash2Icon />
         </Button>
       }

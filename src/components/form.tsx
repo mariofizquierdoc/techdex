@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -68,9 +69,10 @@ export function SubmitButton({
   children,
   ...props
 }: React.ComponentProps<typeof Button> & { pending: boolean }) {
+  const t = useTranslations("common");
   return (
     <Button type="submit" disabled={pending} {...props}>
-      {pending ? "Saving…" : children}
+      {pending ? t("saving") : children}
     </Button>
   );
 }

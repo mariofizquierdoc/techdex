@@ -26,6 +26,13 @@ describe("itemSchema", () => {
     expect(r.success).toBe(false);
     const errs = r.error!.flatten().fieldErrors;
     expect(Object.keys(errs).sort()).toEqual(["assetTag", "categoryId", "purchasePrice", "purchasedAt"]);
+    // Messages are translation keys, resolved per user language in runAction.
+    expect(errs).toMatchObject({
+      assetTag: ["required"],
+      categoryId: ["required"],
+      purchasePrice: ["invalidAmount"],
+      purchasedAt: ["invalidDate"],
+    });
   });
 });
 
@@ -35,7 +42,9 @@ describe("assignSchema / personSchema", () => {
   });
   it("lower-cases emails and rejects invalid ones", () => {
     expect(personSchema.parse({ name: "Ana", email: "Ana@X.com" }).email).toBe("ana@x.com");
-    expect(personSchema.safeParse({ name: "Ana", email: "nope" }).success).toBe(false);
+    const bad = personSchema.safeParse({ name: "Ana", email: "nope" });
+    expect(bad.success).toBe(false);
+    expect(bad.error!.flatten().fieldErrors.email).toEqual(["invalidEmail"]);
   });
 });
 
@@ -43,6 +52,7 @@ describe("assertAdmin", () => {
   it("allows admins and rejects viewers and anonymous users", () => {
     expect(() => assertAdmin({ role: "ADMIN" })).not.toThrow();
     expect(() => assertAdmin({ role: "VIEWER" })).toThrow(AuthzError);
-    expect(() => assertAdmin(null)).toThrow(AuthzError);
+    expect(() => assertAdmin({ role: "VIEWER" })).toThrow(expect.objectContaining({ code: "adminOnly" }));
+    expect(() => assertAdmin(null)).toThrow(expect.objectContaining({ code: "notSignedIn" }));
   });
 });

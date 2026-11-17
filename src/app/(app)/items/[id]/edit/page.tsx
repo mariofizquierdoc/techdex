@@ -1,11 +1,10 @@
 import { notFound, redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/authz";
 import { db } from "@/lib/db";
 import { toDateInput } from "@/lib/format";
 import { updateItemAction } from "../../actions";
 import { ItemForm } from "../../item-form";
-
-export const metadata = { title: "Edit item" };
 
 export default async function EditItemPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -17,10 +16,11 @@ export default async function EditItemPage({ params }: { params: Promise<{ id: s
     db.category.findMany({ orderBy: { name: "asc" } }),
   ]);
   if (!item) notFound();
+  const t = await getTranslations("items.form");
 
   return (
     <div className="mx-auto grid max-w-3xl gap-4">
-      <h1 className="text-2xl font-semibold tracking-tight">Edit {item.assetTag}</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">{t("editTitle", { assetTag: item.assetTag })}</h1>
       <ItemForm
         isEdit
         action={updateItemAction.bind(null, item.id)}

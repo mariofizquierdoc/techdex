@@ -1,7 +1,8 @@
 import { Prisma } from "@prisma/client";
+import { getTranslations } from "next-intl/server";
 import { ZodError } from "zod";
-import { AuthzError } from "./authz";
-import { DomainError } from "./inventory";
+import type messages from "../../messages/es.json";
+import { DomainError } from "./errors";
 
 export type ActionState = {
   ok?: boolean;
@@ -12,32 +13,40 @@ export type ActionState = {
   ts?: number;
 };
 
-export const initialState: ActionState = {};
+export type ToastKey = keyof (typeof messages)["toast"];
+type DuplicateField = keyof (typeof messages)["errors"]["field"];
 
-const UNIQUE_FIELD_LABEL: Record<string, string> = {
-  assetTag: "asset tag",
-  serialNumber: "serial number",
-  email: "email",
-  name: "name",
-};
+const DUPLICATE_FIELDS: readonly string[] = ["assetTag", "serialNumber", "email", "name"] satisfies DuplicateField[];
 
 /**
- * Runs a server-action body and converts expected failures into form state.
- * Unexpected errors are re-thrown so they surface in logs / error boundaries.
+ * Runs a server-action body and converts expected failures into form state,
+ * translated into the current user's language. Unexpected errors are re-thrown
+ * so they surface in logs / error boundaries.
  */
-export async function runAction(fn: () => Promise<unknown>, message = "Saved"): Promise<ActionState> {
+export async function runAction(fn: () => Promise<unknown>, toast: ToastKey = "saved"): Promise<ActionState> {
+  const t = await getTranslations();
   try {
     await fn();
-    return { ok: true, message, ts: Date.now() };
+    return { ok: true, message: t(`toast.${toast}`), ts: Date.now() };
   } catch (e) {
     if (e instanceof ZodError) {
-      return { error: "Please fix the highlighted fields.", fieldErrors: e.flatten().fieldErrors };
+      const fieldErrors: Record<string, string[]> = {};
+      for (const [field, keys] of Object.entries(e.flatten().fieldErrors)) {
+        fieldErrors[field] = (keys ?? []).map((key) => {
+          const k = `validation.${key}` as "validation.invalid";
+          return t.has(k) ? t(k) : t("validation.invalid");
+        });
+      }
+      return { error: t("errors.fixFields"), fieldErrors };
     }
-    if (e instanceof DomainError || e instanceof AuthzError) return { error: e.message };
+    if (e instanceof DomainError) {
+      return { error: t(`errors.${e.code}`, e.params as Record<string, string>) };
+    }
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
       const target = (e.meta?.target as string[] | string | undefined) ?? [];
-      const fields = (Array.isArray(target) ? target : [target]).map((f) => UNIQUE_FIELD_LABEL[f] ?? f);
-      return { error: `That ${fields.join(", ") || "value"} is already in use.` };
+      const first = (Array.isArray(target) ? target : [target]).find((f) => DUPLICATE_FIELDS.includes(f));
+      const field = t(`errors.field.${(first ?? "value") as DuplicateField}`);
+      return { error: t("errors.duplicate", { field }) };
     }
     throw e;
   }

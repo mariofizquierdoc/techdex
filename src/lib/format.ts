@@ -1,16 +1,16 @@
 import { format } from "date-fns";
 
-/** "1234.5" -> 123450. Returns undefined for empty input. */
+// Display formatting (dates, money) lives in next-intl's formatter:
+//   server: (await getFormatter()).dateTime(d, "short") / .number(cents / 100, "money")
+//   client: useFormatter()
+// The helpers below are locale-independent form conversions.
+
+/** "1234.5" or "1234,5" -> 123450. Returns undefined for empty input. */
 export function toCents(value: string | undefined): number | undefined {
   if (value === undefined || value.trim() === "") return undefined;
   const n = Number(value.replace(",", "."));
   if (!Number.isFinite(n) || n < 0) throw new Error("Invalid amount");
   return Math.round(n * 100);
-}
-
-export function formatCents(cents: number | null | undefined): string {
-  if (cents === null || cents === undefined) return "—";
-  return new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(cents / 100);
 }
 
 /** Parse an <input type="date"> value at local noon so it never shifts a day across timezones. */
@@ -22,9 +22,4 @@ export function parseDateInput(value: string): Date {
 export function toDateInput(date: Date | string | null | undefined): string {
   if (!date) return "";
   return format(new Date(date), "yyyy-MM-dd");
-}
-
-export function formatDate(date: Date | string | null | undefined): string {
-  if (!date) return "—";
-  return format(new Date(date), "MMM d, yyyy");
 }

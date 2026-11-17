@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getFormatter, getTranslations } from "next-intl/server";
 import { ArrowLeftIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/status-badge";
 import { requireUser } from "@/lib/authz";
 import { db } from "@/lib/db";
-import { formatCents, formatDate } from "@/lib/format";
 import { ItemActions } from "./item-actions";
 import { Timeline } from "./timeline";
 
@@ -19,6 +19,9 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const user = await requireUser();
   const isAdmin = user.role === "ADMIN";
+  const t = await getTranslations("items");
+  const tc = await getTranslations("common");
+  const format = await getFormatter();
 
   const item = await db.item.findUnique({
     where: { id },
@@ -50,18 +53,18 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
     : [];
 
   const details: [string, React.ReactNode][] = [
-    ["Category", item.category.name],
-    ["Brand / model", [item.brand, item.model].filter(Boolean).join(" ") || "—"],
-    ["Serial number", item.serialNumber ?? "—"],
-    ["Purchase date", formatDate(item.purchasedAt)],
-    ["Purchase price", formatCents(item.purchasePriceCents)],
+    [t("detail.category"), item.category.name],
+    [t("detail.brandModel"), [item.brand, item.model].filter(Boolean).join(" ") || tc("none")],
+    [t("detail.serialNumber"), item.serialNumber ?? tc("none")],
+    [t("detail.purchaseDate"), item.purchasedAt ? format.dateTime(item.purchasedAt, "short") : tc("none")],
+    [t("detail.purchasePrice"), item.purchasePriceCents != null ? format.number(item.purchasePriceCents / 100, "money") : tc("none")],
   ];
 
   return (
     <div className="grid gap-6">
       <div>
         <Link href="/items" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeftIcon className="size-4" /> All items
+          <ArrowLeftIcon className="size-4" /> {t("allItems")}
         </Link>
         <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -89,40 +92,40 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
         <div className="grid content-start gap-6">
           <Card>
             <CardHeader>
-              <CardTitle>Current assignment</CardTitle>
+              <CardTitle>{t("detail.currentAssignment")}</CardTitle>
             </CardHeader>
             <CardContent>
               {item.assignee ? (
                 <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
-                  <dt className="text-muted-foreground">Assignee</dt>
+                  <dt className="text-muted-foreground">{t("detail.assignee")}</dt>
                   <dd>
                     <Link href={`/people/${item.assignee.id}`} className="font-medium hover:underline">
                       {item.assignee.name}
                     </Link>
                   </dd>
-                  <dt className="text-muted-foreground">Job title</dt>
-                  <dd>{item.jobTitle ?? "—"}</dd>
-                  <dt className="text-muted-foreground">Location</dt>
-                  <dd>{item.location ?? "—"}</dd>
+                  <dt className="text-muted-foreground">{t("detail.jobTitle")}</dt>
+                  <dd>{item.jobTitle ?? tc("none")}</dd>
+                  <dt className="text-muted-foreground">{t("detail.location")}</dt>
+                  <dd>{item.location ?? tc("none")}</dd>
                 </dl>
               ) : (
-                <p className="text-sm text-muted-foreground">Not assigned to anyone.</p>
+                <p className="text-sm text-muted-foreground">{t("detail.notAssigned")}</p>
               )}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Condition</CardTitle>
+              <CardTitle>{t("detail.condition")}</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm whitespace-pre-wrap">{item.notes || <span className="text-muted-foreground">No notes.</span>}</p>
+              <p className="text-sm whitespace-pre-wrap">{item.notes || <span className="text-muted-foreground">{t("detail.noNotes")}</span>}</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Details</CardTitle>
+              <CardTitle>{t("detail.details")}</CardTitle>
             </CardHeader>
             <CardContent>
               <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
@@ -139,7 +142,7 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
 
         <Card>
           <CardHeader>
-            <CardTitle>History</CardTitle>
+            <CardTitle>{t("detail.history")}</CardTitle>
           </CardHeader>
           <CardContent>
             <Timeline

@@ -1,5 +1,6 @@
 import type { ItemStatus, Prisma } from "@prisma/client";
 import { db } from "./db";
+import { DomainError } from "./errors";
 import type {
   AssignInput,
   ItemInput,
@@ -9,19 +10,11 @@ import type {
   UnassignInput,
 } from "./validation";
 
-/** A business-rule violation whose message is safe to show to the user. */
-export class DomainError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "DomainError";
-  }
-}
-
 type Tx = Prisma.TransactionClient;
 
 async function getItemOrThrow(tx: Tx, itemId: string) {
   const item = await tx.item.findUnique({ where: { id: itemId } });
-  if (!item) throw new DomainError("Item not found");
+  if (!item) throw new DomainError("itemNotFound");
   return item;
 }
 
@@ -37,6 +30,8 @@ function itemFields(input: ItemInput) {
     purchasedAt: input.purchasedAt ?? null,
   };
 }
+
+export { DomainError };
 
 /** Creates an item in storage and records its PURCHASED event. */
 export async function createItem(input: ItemInput, userId: string) {
@@ -78,11 +73,11 @@ export async function deleteItem(itemId: string) {
 export async function assignItem(itemId: string, input: AssignInput, userId: string) {
   return db.$transaction(async (tx) => {
     const item = await getItemOrThrow(tx, itemId);
-    if (item.status === "RETIRED") throw new DomainError("Retired items can't be assigned");
+    if (item.status === "RETIRED") throw new DomainError("retiredCannotAssign");
 
     const person = await tx.person.findUnique({ where: { id: input.personId } });
-    if (!person) throw new DomainError("Person not found");
-    if (!person.active) throw new DomainError(`${person.name} is inactive and can't receive items`);
+    if (!person) throw new DomainError("personNotFound");
+    if (!person.active) throw new DomainError("personInactive", { name: person.name });
 
     if (item.assigneeId && item.assigneeId !== person.id) {
       await tx.itemEvent.create({
@@ -93,7 +88,7 @@ export async function assignItem(itemId: string, input: AssignInput, userId: str
           personId: item.assigneeId,
           jobTitle: item.jobTitle,
           location: item.location,
-          notes: `Reassigned to ${person.name}`,
+          notes: null,
           fromStatus: item.status,
           toStatus: "IN_USE",
           createdById: userId,
@@ -130,7 +125,7 @@ export async function assignItem(itemId: string, input: AssignInput, userId: str
 
 async function unassignInTx(tx: Tx, itemId: string, input: UnassignInput, userId: string) {
   const item = await getItemOrThrow(tx, itemId);
-  if (!item.assigneeId) throw new DomainError("Item isn't assigned to anyone");
+  if (!item.assigneeId) throw new DomainError("notAssigned");
 
   await tx.itemEvent.create({
     data: {
@@ -165,9 +160,9 @@ export async function unassignItem(itemId: string, input: UnassignInput, userId:
 export async function changeStatus(itemId: string, input: StatusInput, userId: string) {
   return db.$transaction(async (tx) => {
     const item = await getItemOrThrow(tx, itemId);
-    if (input.toStatus === item.status) throw new DomainError("Item already has that status");
+    if (input.toStatus === item.status) throw new DomainError("alreadyHasStatus");
     if (input.toStatus === "IN_USE") {
-      if (!item.assigneeId) throw new DomainError("Assign the item to someone to mark it in use");
+      if (!item.assigneeId) throw new DomainError("assignToUse");
     } else if (item.assigneeId && input.toStatus !== "IN_REPAIR") {
       return unassignInTx(tx, itemId, { ...input, toStatus: input.toStatus }, userId);
     }
@@ -194,7 +189,7 @@ export async function changeStatus(itemId: string, input: StatusInput, userId: s
 export async function recordRepair(itemId: string, input: RepairInput, userId: string) {
   return db.$transaction(async (tx) => {
     const item = await getItemOrThrow(tx, itemId);
-    if (item.status === "RETIRED") throw new DomainError("Retired items can't be repaired");
+    if (item.status === "RETIRED") throw new DomainError("retiredCannotRepair");
 
     let toStatus: ItemStatus = item.status;
     if (item.status === "IN_REPAIR") toStatus = item.assigneeId ? "IN_USE" : "IN_STORAGE";
@@ -244,7 +239,7 @@ export async function setPersonActive(personId: string, active: boolean) {
   if (!active) {
     const held = await db.item.count({ where: { assigneeId: personId } });
     if (held > 0) {
-      throw new DomainError(`This person still has ${held} item${held === 1 ? "" : "s"} assigned. Reassign or return them first.`);
+      throw new DomainError("personHoldsItems", { count: held });
     }
   }
   return db.person.update({ where: { id: personId }, data: { active } });
@@ -252,6 +247,6 @@ export async function setPersonActive(personId: string, active: boolean) {
 
 export async function deleteCategory(categoryId: string) {
   const used = await db.item.count({ where: { categoryId } });
-  if (used > 0) throw new DomainError(`Category is used by ${used} item${used === 1 ? "" : "s"}`);
+  if (used > 0) throw new DomainError("categoryInUse", { count: used });
   await db.category.delete({ where: { id: categoryId } });
 }
