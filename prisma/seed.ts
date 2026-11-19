@@ -29,6 +29,12 @@ async function main() {
     categories[name] = c.id;
   }
 
+  // Real installs that import their own inventory set SEED_SAMPLE_DATA="false".
+  if (process.env.SEED_SAMPLE_DATA === "false") {
+    console.log(`Seeded users (${adminEmail}, ${viewerEmail}) and categories; sample data disabled.`);
+    return;
+  }
+
   // Sample data only on an empty inventory, so re-running the seed is safe.
   if ((await db.item.count()) > 0) {
     console.log("Items already exist; skipped sample data.");

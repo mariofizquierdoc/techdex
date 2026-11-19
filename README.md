@@ -46,8 +46,26 @@ item in a single transaction.
 | `npm test` | Unit tests (uses a throwaway `prisma/test.db`) |
 | `npm run lint` | ESLint |
 | `npm run db:migrate` | Apply / create migrations |
-| `npm run db:seed` | Seed accounts, categories and sample data (sample items only on an empty DB) |
+| `npm run db:seed` | Seed accounts, categories and sample data (sample items only on an empty DB; skip them with `SEED_SAMPLE_DATA="false"`) |
+| `npm run db:import -- "<file.xlsx>" [--dry-run]` | Import the IT inventory spreadsheet (see below) |
 | `npm run db:studio` | Browse the database in Prisma Studio |
+
+## Importing the inventory spreadsheet
+`prisma/import-inventory.ts` loads the IT department's `INVENTARIO SISTEMAS.xlsx` (first sheet, all its sections:
+main office, branches, printers, scanners, retired and spare equipment). On a fresh database:
+```bash
+npx prisma migrate deploy
+SEED_SAMPLE_DATA=false npm run db:seed        # accounts + categories only (PowerShell: $env:SEED_SAMPLE_DATA="false")
+npm run db:import -- "C:\path\INVENTARIO SISTEMAS.xlsx" --dry-run   # review the report, writes nothing
+npm run db:import -- "C:\path\INVENTARIO SISTEMAS.xlsx"
+```
+- Asset tags are generated per category (`LT-`, `DT-`, `PRN-`, `SCN-`, `NET-`, `SEC-`, `PER-`).
+- People are created from the user column with emails `<initial><surname>@medecsa.com`. Rows naming an area
+  (`VENTAS`, `SALA CAPACITACIONES`, …) stay unassigned, with that area as the location.
+- Specs (IP, AnyDesk, OS, mainboard, monitor, UPS, …) go into the item's notes. Passwords, Wi-Fi keys, licence keys
+  and remote-access accounts in the sheet are never read.
+- It runs once per database: a second run stops with an error. Use `npm run db:reset` to redo it.
+- Keep the spreadsheet out of the repository; it contains personal data and credentials (`*.xlsx` is git-ignored).
 
 ## Deploying (Windows Server intranet)
 1. Install Node.js LTS and [NSSM](https://nssm.cc).

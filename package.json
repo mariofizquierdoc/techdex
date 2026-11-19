@@ -12,7 +12,8 @@
     "db:reset": "prisma migrate reset",
     "db:studio": "prisma studio",
     "test": "vitest run",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "db:import": "tsx prisma/import-inventory.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
@@ -44,6 +45,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.5.29",
+    "exceljs": "^4.4.0",
     "prisma": "^6.19.3",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
